@@ -1,7 +1,7 @@
 #!/bin/bash
 
 APP_NAME="flask-app"
-IMAGE="yourdockerhubusername/$APP_NAME"
+IMAGE="cath0806/$APP_NAME"
 NEW_TAG=$1
 OLD_TAG=$2
 
