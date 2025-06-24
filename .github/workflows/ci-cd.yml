@@ -1,0 +1,38 @@
+name: CI/CD with Health Check & Rollback
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-deploy:
+    runs-on: self-hosted
+
+    env:
+      TAG: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set previous tag
+        id: prev_tag
+        run: |
+          echo "Finding previous tag..."
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "${TAG}" | head -n 1)
+          echo "OLD_TAG=$PREV_TAG" >> $GITHUB_ENV
+          echo "old_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/flask-app:${{ env.TAG }} .
+          docker push ${{ secrets.DOCKER_USERNAME }}/flask-app:${{ env.TAG }}
+
+      - name: Deploy Locally (WSL) with Health Check
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh ${{ env.TAG }} ${{ env.OLD_TAG }}
